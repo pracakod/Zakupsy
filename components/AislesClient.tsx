@@ -290,6 +290,8 @@ export default function AislesClient({ user }: { user: User }) {
   }
 
   async function addCustomProduct() {
+    if (!selectedAisle) return;
+
     // 1. Add to active list
     await addItem(customProductName.trim(), customProductIcon);
     
@@ -308,7 +310,8 @@ export default function AislesClient({ user }: { user: User }) {
     if (!error) {
       setDbCustomAisles(updatedCustom);
       setUserAisles([...AISLES, ...updatedCustom]);
-      setSelectedAisle(updatedCustom.find(a => a.id === selectedAisle.id));
+      const currentAisle = updatedCustom.find(a => a.id === selectedAisle.id);
+      if (currentAisle) setSelectedAisle(currentAisle);
       showToast("Zapisano produkt w alejce", "success");
     }
     
