@@ -13,7 +13,7 @@ export default function InfoModal({ type, onClose }: InfoModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in"
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in"
       onClick={onClose}
     >
       <div 
