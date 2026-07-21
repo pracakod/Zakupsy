@@ -23,6 +23,7 @@ import { useTheme } from "@/lib/ThemeContext";
 import { useState, useEffect } from "react";
 import AnimalAvatar, { AnimalType } from "./AnimalAvatar";
 import { useToast } from "@/lib/ToastContext";
+import { getUpcomingHolidays } from "@/lib/holidays";
 
 export default function ProfileClient({ user }: { user: User }) {
   const userName = user.email?.split("@")[0] || "Użytkownik";
@@ -150,24 +151,12 @@ export default function ProfileClient({ user }: { user: User }) {
   }
 
   const getNextHoliday = () => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    
-    // Mother's Day in Poland is May 26
-    const mothersDay = new Date(currentYear, 4, 26); // Month is 0-indexed
-    
-    // If it already passed this year, look for next year
-    if (now > mothersDay) {
-      mothersDay.setFullYear(currentYear + 1);
-    }
-    
-    const diffTime = mothersDay.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+    const upcoming = getUpcomingHolidays();
+    const first = upcoming[0];
     return {
-      name: "Dzień Matki",
-      daysLeft: diffDays,
-      date: "26 maja",
+      name: first.name,
+      daysLeft: first.daysLeft,
+      date: first.formattedDate,
     };
   };
 
