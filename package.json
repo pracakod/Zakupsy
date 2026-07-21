@@ -11,16 +11,21 @@
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.4",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.511.0",
     "next": "^16.2.4",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-barcode": "^1.6.1",
+    "react-dom": "^19.2.5",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

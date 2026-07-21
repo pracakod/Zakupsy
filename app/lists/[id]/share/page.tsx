@@ -11,10 +11,11 @@ export default async function SharePage({
   const supabase = await createClient();
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/auth");
+  if (!session?.user) redirect("/auth");
+  const user = session.user;
 
   const { data: list } = await supabase
     .from("lists")

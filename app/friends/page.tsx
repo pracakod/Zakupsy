@@ -5,10 +5,16 @@ import FriendsClient from "@/components/FriendsClient";
 export default async function FriendsPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/auth");
+  if (!session) redirect("/auth");
+  const user = session.user;
 
-  return <FriendsClient user={user} />;
+  // Render client component immediately with local caching
+  return (
+    <FriendsClient 
+      user={user} 
+    />
+  );
 }

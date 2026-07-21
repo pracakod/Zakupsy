@@ -4,11 +4,12 @@ import HomeClient from "@/components/HomeClient";
 
 export default async function HomePage() {
   const supabase = await createClient();
+  // Use a faster check for the session first
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/auth");
+  if (!session) redirect("/auth");
 
-  return <HomeClient user={user} />;
+  return <HomeClient user={session.user} />;
 }

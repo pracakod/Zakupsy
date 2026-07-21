@@ -27,6 +27,8 @@ export const viewport: Viewport = {
 import BottomNav from "@/components/BottomNav";
 import { ThemeProvider } from "@/lib/ThemeContext";
 import { ToastProvider } from "@/lib/ToastContext";
+import GlobalRealtime from "@/components/GlobalRealtime";
+import OfflineBanner from "@/components/OfflineBanner";
 
 export default function RootLayout({
   children,
@@ -46,9 +48,22 @@ export default function RootLayout({
       <body className="antialiased selection:bg-green-500/30">
         <ThemeProvider>
           <ToastProvider>
-            <div className="flex flex-col min-h-dvh max-w-2xl mx-auto relative bg-[var(--color-surface)] shadow-2xl shadow-black/50">
-              {children}
+            <div className="flex flex-col min-h-dvh max-w-2xl mx-auto relative bg-[var(--color-surface)] shadow-2xl shadow-black/50 overflow-hidden text-text-primary">
+              <OfflineBanner />
+              {/* Ultra-Subtle Deep Ambient Background */}
+              <div 
+                className="absolute inset-0 z-0 pointer-events-none opacity-20"
+                style={{ 
+                  background: "radial-gradient(circle at 0% 0%, var(--color-brand-500) 0%, transparent 50%)",
+                  filter: "blur(80px)"
+                }}
+              />
+              
+              <div className="relative flex flex-col flex-1">
+                {children}
+              </div>
               <BottomNav />
+              <GlobalRealtime />
             </div>
           </ToastProvider>
         </ThemeProvider>

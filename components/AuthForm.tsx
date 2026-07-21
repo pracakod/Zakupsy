@@ -10,6 +10,7 @@ export default function AuthForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -31,6 +32,12 @@ export default function AuthForm() {
         router.refresh();
       }
     } else {
+      if (!acceptedTerms) {
+        setError("Musisz zaakceptować regulamin i politykę prywatności aby założyć konto.");
+        setLoading(false);
+        return;
+      }
+      
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setError(error.message === "User already registered"
@@ -122,6 +129,24 @@ export default function AuthForm() {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+
+        {/* Terms Checkbox - Only for registration */}
+        {mode === "register" && (
+          <div className="flex items-start gap-3 mt-4">
+            <div className="flex items-center h-5 mt-0.5">
+              <input
+                id="terms"
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="w-4 h-4 rounded border border-border bg-surface-3 checked:bg-brand-500 checked:border-brand-500 transition-colors cursor-pointer accent-brand-500"
+              />
+            </div>
+            <label htmlFor="terms" className="text-[11px] text-text-muted leading-relaxed">
+              Akceptuję <a href="/regulamin" className="text-brand-500 hover:text-brand-400 font-bold underline cursor-pointer" target="_blank" rel="noopener noreferrer">Regulamin</a> oraz <a href="/polityka" className="text-brand-500 hover:text-brand-400 font-bold underline cursor-pointer" target="_blank" rel="noopener noreferrer">Politykę Prywatności</a>. Rozumiem, że moje dane będą przetwarzane w celu świadczenia usług w oparciu o bezpieczną chmurę Supabase.
+            </label>
+          </div>
+        )}
 
         {/* Error / Message */}
         {error && (

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "emerald" | "ocean" | "sunset" | "purple";
+type Theme = "emerald" | "ocean" | "sunset" | "purple" | "panther" | "rose" | "midnight";
 
 interface ThemeContextType {
   theme: Theme;

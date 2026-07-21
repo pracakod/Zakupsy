@@ -5,10 +5,10 @@ import AislesClient from "@/components/AislesClient";
 export default async function AislesPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/auth");
+  if (!session) redirect("/auth");
 
-  return <AislesClient user={user} />;
+  return <AislesClient user={session.user} />;
 }

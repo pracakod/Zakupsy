@@ -26,12 +26,13 @@ export default function ArchiveClient({
   initialLists: ShoppingList[];
   user: User;
 }) {
+  const router = useRouter();
   const [lists, setLists] = useState<ShoppingList[]>(initialLists);
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [previewItems, setPreviewItems] = useState<any[] | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const supabase = createClient();
-  const router = useRouter();
   const { showToast } = useToast();
 
   async function restoreList(id: string) {
@@ -48,7 +49,6 @@ export default function ArchiveClient({
   }
 
   async function deleteListPermanently(id: string) {
-    if (!confirm("Czy na pewno chcesz trwale usunąć tę listę z archiwum?")) return;
     
     // Delete items first (due to foreign key) - items table doesn't have cascades probably
     await supabase.from("items").delete().eq("list_id", id);
@@ -97,26 +97,23 @@ export default function ArchiveClient({
   return (
     <div className="min-h-dvh flex flex-col w-full pb-20" style={{ background: "var(--color-surface)" }}>
       {/* Header */}
-      <header className="px-5 pt-6 pb-6 sticky top-0 z-10" style={{ background: "var(--color-surface)" }}>
-        <button
-          onClick={() => router.push("/")}
-          className="flex items-center gap-1.5 text-sm mb-5 cursor-pointer"
-          style={{ color: "var(--color-brand-400)" }}
-        >
-          <ArrowLeft size={16} />
-          Powrót
-        </button>
-
+      <header className="px-6 pt-10 mb-8 relative z-10 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-slate-500/10 flex items-center justify-center text-slate-400 shadow-inner">
-            <ArchiveIcon size={24} />
-          </div>
+          <button 
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-xl bg-surface-2/80 backdrop-blur-md border border-border flex items-center justify-center text-text-muted hover:text-brand-500 transition-colors active:scale-90"
+          >
+            <ArrowLeft size={20} />
+          </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+            <h1 className="text-4xl font-black tracking-tighter" style={{ fontFamily: "var(--font-display)" }}>
               Archiwum
             </h1>
-            <p className="text-xs text-text-muted">Twoje zakończone listy</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-muted opacity-60">Zakończone listy zakupów</p>
           </div>
+        </div>
+        <div className="w-14 h-14 rounded-2xl bg-surface-2/80 backdrop-blur-md border border-border flex items-center justify-center text-text-muted">
+          <ArchiveIcon size={24} />
         </div>
       </header>
 
@@ -250,13 +247,40 @@ export default function ArchiveClient({
               <div className="h-px bg-border my-2 mx-4" />
 
               <button 
-                onClick={() => deleteListPermanently(selectedList.id)}
+                onClick={() => setShowDeleteConfirm(selectedList.id)}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-red-500/10 text-red-400 transition-colors text-left"
               >
                 <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
                   <Trash2 size={18} />
                 </div>
                 <span className="font-semibold">Usuń trwale z archiwum</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in" onClick={() => setShowDeleteConfirm(null)}>
+          <div className="w-full max-w-xs bg-surface-2 border border-border rounded-[2.5rem] p-8 shadow-2xl animate-pop-in" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-6">
+              <Trash2 size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-center mb-2 text-text-primary">Wymazać z archiwum?</h3>
+            <p className="text-sm text-center text-text-muted mb-8 text-balance">Ta operacja jest nieodwracalna. Lista "{selectedList?.name}" zostanie trwale usunięta.</p>
+            
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => { deleteListPermanently(showDeleteConfirm); setShowDeleteConfirm(null); setSelectedList(null); }}
+                className="w-full py-4 rounded-xl bg-red-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+              >
+                Tak, usuń trwale
+              </button>
+              <button 
+                onClick={() => setShowDeleteConfirm(null)}
+                className="w-full py-4 rounded-xl bg-surface-3 font-bold text-sm text-text-muted hover:text-text-primary transition-all"
+              >
+                Anuluj
               </button>
             </div>
           </div>

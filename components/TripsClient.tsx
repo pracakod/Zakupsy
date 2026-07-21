@@ -18,17 +18,21 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  ShoppingBag
+  ShoppingBag,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/lib/ToastContext";
+import { useRouter } from "next/navigation";
 
 export default function TripsClient({ user }: { user: User }) {
+  const router = useRouter();
   const [trips, setTrips] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editingTrip, setEditingTrip] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [newTrip, setNewTrip] = useState({ name: "", destination: "", date: "" });
   const [addingItemTo, setAddingItemTo] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<any | null>(null);
   const [newItemName, setNewItemName] = useState("");
   const [expandedTrips, setExpandedTrips] = useState<Set<string>>(new Set());
   const supabase = createClient();
@@ -89,31 +93,48 @@ export default function TripsClient({ user }: { user: User }) {
   async function updateTrip(e: React.FormEvent) {
     e.preventDefault();
     if (!editingTrip.name) return;
+    
+    const previousTrips = [...trips];
+    const updatedTrip = { ...editingTrip };
+
+    // Optimistic update
+    setTrips((prev: any[]) => prev.map((trip: any) => trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip));
+    setEditingTrip(null);
     setLoading(true);
 
     const { error } = await supabase
       .from("trips")
       .update({
-        name: editingTrip.name,
-        destination: editingTrip.destination,
-        start_date: editingTrip.start_date || null
+        name: updatedTrip.name,
+        destination: updatedTrip.destination,
+        start_date: updatedTrip.start_date || null
       })
-      .eq("id", editingTrip.id);
+      .eq("id", updatedTrip.id);
 
-    if (!error) {
-      setEditingTrip(null);
-      fetchTrips();
+    if (error) {
+      setTrips(previousTrips);
+      showToast("Błąd aktualizacji: " + error.message, "error");
+    } else {
       showToast("Podróż zaktualizowana", "success");
     }
     setLoading(false);
   }
 
   async function deleteTrip(id: string) {
-    if (!confirm("Czy na pewno chcesz usunąć tę podróż?")) return;
-    await supabase.from("trip_items").delete().eq("trip_id", id);
-    await supabase.from("trips").delete().eq("id", id);
-    fetchTrips();
-    showToast("Podróż usunięta", "info");
+    const previousTrips = [...trips];
+    
+    // Optimistic remove
+    setTrips((prev: any[]) => prev.filter((trip: any) => trip.id !== id));
+    
+    try {
+      await supabase.from("trip_items").delete().eq("trip_id", id);
+      const { error } = await supabase.from("trips").delete().eq("id", id);
+      if (error) throw error;
+      showToast("Podróż usunięta", "info");
+    } catch (error: any) {
+      setTrips(previousTrips);
+      showToast("Błąd przy usuwaniu: " + error.message, "error");
+    }
   }
 
   async function exportToShoppingList(trip: any) {
@@ -161,39 +182,105 @@ export default function TripsClient({ user }: { user: User }) {
   }
 
   async function toggleItem(itemId: string, current: boolean) {
-    await supabase.from("trip_items").update({ is_packed: !current }).eq("id", itemId);
-    fetchTrips();
+    const previousTrips = [...trips];
+    
+    // Optimistic update
+    setTrips((prev: any[]) => prev.map((trip: any) => ({
+      ...trip,
+      trip_items: trip.trip_items?.map((item: any) => 
+        item.id === itemId ? { ...item, is_packed: !current } : item
+      )
+    })));
+
+    const { error } = await supabase.from("trip_items").update({ is_packed: !current }).eq("id", itemId);
+    
+    if (error) {
+      setTrips(previousTrips);
+      showToast("Błąd aktualizacji przedmiotu", "error");
+    }
   }
 
   async function addTripItem(tripId: string) {
     if (!newItemName.trim()) return;
-    const { error } = await supabase.from("trip_items").insert({
-      trip_id: tripId,
-      name: newItemName.trim()
-    });
-    if (!error) {
-      setNewItemName("");
-      setAddingItemTo(null);
-      fetchTrips();
+    
+    const name = newItemName.trim();
+    const tempId = `temp-${Date.now()}`;
+    const previousTrips = [...trips];
+    
+    // Optimistic add
+    setTrips((prev: any[]) => prev.map((trip: any) => {
+      if (trip.id === tripId) {
+        return {
+          ...trip,
+          trip_items: [...(trip.trip_items || []), { id: tempId, name, is_packed: false, trip_id: tripId }]
+        };
+      }
+      return trip;
+    }));
+    
+    setNewItemName("");
+    setAddingItemTo(null);
+
+    const { data, error } = await supabase
+      .from("trip_items")
+      .insert({
+        trip_id: tripId,
+        name
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setTrips(previousTrips);
+      showToast("Błąd przy dodawaniu", "error");
+    } else if (data) {
+      // Replace temp with real data
+      setTrips((prev: any[]) => prev.map((trip: any) => {
+        if (trip.id === tripId) {
+          return {
+            ...trip,
+            trip_items: trip.trip_items.map((i: any) => i.id === tempId ? data : i)
+          };
+        }
+        return trip;
+      }));
       showToast("Dodano do listy", "success");
     }
   }
 
   async function removeTripItem(itemId: string) {
+    const previousTrips = [...trips];
+    
+    // Optimistic remove
+    setTrips((prev: any[]) => prev.map((trip: any) => ({
+      ...trip,
+      trip_items: trip.trip_items?.filter((i: any) => i.id !== itemId)
+    })));
+
     const { error } = await supabase.from("trip_items").delete().eq("id", itemId);
-    if (!error) {
-      fetchTrips();
+    
+    if (error) {
+      setTrips(previousTrips);
+      showToast("Błąd przy usuwaniu", "error");
     }
   }
 
   return (
     <div className="flex-1 pb-48 animate-fade-in px-6 pt-6 max-w-4xl mx-auto">
       <header className="mb-10 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>
-            Podróże
-          </h1>
-          <p className="text-sm opacity-50">Zorganizuj swój wyjazd i pakowanie</p>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-xl bg-surface-2/80 backdrop-blur-md border border-border flex items-center justify-center text-text-muted hover:text-brand-500 transition-colors active:scale-90"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>
+              Podróże
+            </h1>
+            <p className="text-sm opacity-50">Zorganizuj swój wyjazd i pakowanie</p>
+          </div>
         </div>
         <button 
           onClick={() => setShowAdd(true)}
@@ -279,7 +366,7 @@ export default function TripsClient({ user }: { user: User }) {
             <div className="flex gap-3 mt-8">
               <button 
                 type="button"
-                onClick={() => deleteTrip(editingTrip.id)}
+                onClick={() => setShowDeleteConfirm(editingTrip)}
                 className="px-6 py-4 rounded-2xl border border-red-500/20 bg-red-500/5 text-red-500 font-bold"
               >
                 <Trash2 size={18} />
@@ -444,6 +531,33 @@ export default function TripsClient({ user }: { user: User }) {
           </div>
         )}
       </div>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in" onClick={() => setShowDeleteConfirm(null)}>
+          <div className="w-full max-w-xs bg-surface-2 border border-border rounded-[2.5rem] p-8 shadow-2xl animate-pop-in" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-6">
+              <Trash2 size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-center mb-2 text-text-primary">Usunąć podróż?</h3>
+            <p className="text-sm text-center text-text-muted mb-8 text-balance">Stracisz plan i listę pakowania dla: "{showDeleteConfirm.name}".</p>
+            
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => { deleteTrip(showDeleteConfirm.id); setShowDeleteConfirm(null); setEditingTrip(null); }}
+                className="w-full py-4 rounded-xl bg-red-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+              >
+                Tak, usuń
+              </button>
+              <button 
+                onClick={() => setShowDeleteConfirm(null)}
+                className="w-full py-4 rounded-xl bg-surface-3 font-bold text-sm text-text-muted hover:text-text-primary transition-all"
+              >
+                Anuluj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

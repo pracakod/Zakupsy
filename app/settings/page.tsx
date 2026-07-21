@@ -1,21 +1,47 @@
 "use client";
 
 import { useTheme } from "@/lib/ThemeContext";
-import { ChevronLeft, MapPin, Moon, Sun, Palette, Search } from "lucide-react";
+import { ChevronLeft, MapPin, Moon, Sun, Palette, Search, Bell, LogOut, ListTodo, EyeOff, Volume2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useToast } from "@/lib/ToastContext";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
   const { theme, setTheme, isDarkMode, setIsDarkMode, city, setCity } = useTheme();
   const { showToast } = useToast();
+  const router = useRouter();
+  const supabase = createClient();
+
   const [tempCity, setTempCity] = useState(city);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  // Local Preferences
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [soundsEnabled, setSoundsEnabled] = useState(true);
+  const [hideCrossed, setHideCrossed] = useState(false);
+  const [compactMode, setCompactMode] = useState(false);
+
   useEffect(() => {
-    // Prevent search on mount if city is already set
+    // Hydrate local preferences
+    setPushEnabled(localStorage.getItem("pref-push") !== "false");
+    setSoundsEnabled(localStorage.getItem("pref-sounds") !== "false");
+    setHideCrossed(localStorage.getItem("pref-hide") === "true");
+    setCompactMode(localStorage.getItem("pref-compact") === "true");
+  }, []);
+
+  const handlePrefChange = (key: string, value: boolean, setter: any) => {
+    setter(value);
+    localStorage.setItem(key, value.toString());
+    
+    // Toggle system darkmode equivalent for compact mode if we want to add CSS vars later
+    // if (key === "pref-compact") document.documentElement.classList.toggle("compact", value);
+  };
+
+  useEffect(() => {
     if (tempCity.length < 3 || tempCity === city) {
       setSuggestions([]);
       return;
@@ -51,17 +77,19 @@ export default function SettingsPage() {
     { id: "ocean", name: "Ocean", color: "bg-sky-500" },
     { id: "sunset", name: "Zachód", color: "bg-orange-500" },
     { id: "purple", name: "Fiolet", color: "bg-purple-500" },
+    { id: "panther", name: "Pantera", color: "panther-pattern" },
+    { id: "rose", name: "Róż", color: "bg-pink-500" },
+    { id: "midnight", name: "Północ", color: "bg-slate-900" },
   ];
 
   return (
     <div className="min-h-screen pb-32 animate-fade-in bg-surface">
-      {/* Header */}
       <header className="px-6 pt-12 pb-6">
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/home" className="w-10 h-10 rounded-xl glass flex items-center justify-center active:scale-90 transition-all">
+          <Link href="/home" className="w-10 h-10 rounded-xl glass flex items-center justify-center active:scale-90 transition-all text-text-primary">
             <ChevronLeft size={20} />
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+          <h1 className="text-2xl font-bold tracking-tight text-text-primary" style={{ fontFamily: "var(--font-display)" }}>
             Ustawienia
           </h1>
         </div>
@@ -78,8 +106,8 @@ export default function SettingsPage() {
                   {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
                 </div>
                 <div>
-                  <p className="text-sm font-bold">Tryb ciemny</p>
-                  <p className="text-[10px] opacity-50">Oszczędzaj baterię</p>
+                  <p className="text-sm font-bold text-text-primary">Tryb ciemny</p>
+                  <p className="text-[10px] text-text-muted">Oszczędzaj baterię</p>
                 </div>
               </div>
               <button 
@@ -95,14 +123,14 @@ export default function SettingsPage() {
                 <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-400">
                   <Palette size={20} />
                 </div>
-                <p className="text-sm font-bold">Motyw kolorystyczny</p>
+                <p className="text-sm font-bold text-text-primary">Motyw kolorystyczny</p>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {themes.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setTheme(t.id as any)}
-                    className={`h-10 rounded-xl border-2 transition-all ${theme === t.id ? 'border-brand-500' : 'border-transparent'}`}
+                    className={`h-10 rounded-xl border-2 transition-all overflow-hidden ${theme === t.id ? 'border-brand-500' : 'border-transparent'}`}
                   >
                     <div className={`w-full h-full rounded-lg ${t.color}`} />
                   </button>
@@ -112,17 +140,101 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Notifications */}
+        <section className="space-y-4">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary px-1">Powiadomienia i Dźwięk</h2>
+          <div className="rounded-3xl glass p-5 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                  <Bell size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-text-primary">Powiadomienia Push</p>
+                  <p className="text-[10px] text-text-muted">Alerty o nowych wiadomościach</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handlePrefChange("pref-push", !pushEnabled, setPushEnabled)}
+                className={`w-12 h-6 rounded-full transition-all relative ${pushEnabled ? 'bg-brand-500' : 'bg-surface-4'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${pushEnabled ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
+                  <Volume2 size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-text-primary">Dźwięki aplikacji</p>
+                  <p className="text-[10px] text-text-muted">Subtelne kliknięcia przyznane</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handlePrefChange("pref-sounds", !soundsEnabled, setSoundsEnabled)}
+                className={`w-12 h-6 rounded-full transition-all relative ${soundsEnabled ? 'bg-brand-500' : 'bg-surface-4'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${soundsEnabled ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Shopping Preferences */}
+        <section className="space-y-4">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary px-1">Preferencje Zakupów</h2>
+          <div className="rounded-3xl glass p-5 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400">
+                  <EyeOff size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-text-primary">Ukrywaj skreślone</p>
+                  <p className="text-[10px] text-text-muted">Kupione produkty znikają ze środka</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handlePrefChange("pref-hide", !hideCrossed, setHideCrossed)}
+                className={`w-12 h-6 rounded-full transition-all relative ${hideCrossed ? 'bg-brand-500' : 'bg-surface-4'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${hideCrossed ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+                  <ListTodo size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-text-primary">Tryb Kompaktowy</p>
+                  <p className="text-[10px] text-text-muted">Więcej list na jednym ekranie</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handlePrefChange("pref-compact", !compactMode, setCompactMode)}
+                className={`w-12 h-6 rounded-full transition-all relative ${compactMode ? 'bg-brand-500' : 'bg-surface-4'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${compactMode ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* Location Section */}
         <section className="space-y-4">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary px-1">Pogoda</h2>
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary px-1">Integracje</h2>
           <div className="rounded-3xl glass p-5 space-y-4 relative">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
                 <MapPin size={20} />
               </div>
               <div>
-                <p className="text-sm font-bold">Twoja lokalizacja</p>
-                <p className="text-[10px] opacity-50">Wpisz miasto powyżej 3 znaków</p>
+                <p className="text-sm font-bold text-text-primary">Pogoda na Start</p>
+                <p className="text-[10px] text-text-muted">Twój widget z ekranu głównego</p>
               </div>
             </div>
             
@@ -136,18 +248,17 @@ export default function SettingsPage() {
                 onChange={(e) => setTempCity(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                placeholder="Np. Warszawa, Berlin..."
-                className="w-full bg-surface-2 border border-border rounded-xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-brand-500 transition-all"
+                placeholder="Np. Warszawa..."
+                className="w-full bg-surface-2 border border-border rounded-xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-brand-500 transition-all text-text-primary"
               />
               
-              {/* Autocomplete Suggestions */}
               {isFocused && suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-3 rounded-2xl bg-[#1e2535] !bg-opacity-100 border border-white/10 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.8)] z-[999] overflow-hidden animate-pop-in">
                   {suggestions.map((s, idx) => (
                     <button
                       key={idx}
                       onClick={() => selectCity(s)}
-                      className="w-full px-5 py-4 text-left hover:bg-brand-500/10 border-b border-border last:border-0 transition-colors"
+                      className="w-full px-5 py-4 text-left hover:bg-brand-500/10 border-b border-white/5 last:border-0 transition-colors"
                     >
                       <p className="text-sm font-bold truncate text-white">{s.display_name.split(",")[0]}</p>
                       <p className="text-[10px] opacity-40 truncate text-slate-300">{s.display_name.split(",").slice(1).join(",")}</p>
@@ -162,15 +273,51 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+          </div>
+        </section>
+
+        {/* Account Management */}
+        <section className="space-y-4">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary px-1">Zarządzanie Kontem</h2>
+          <div className="rounded-3xl glass p-5 space-y-4">
             
-            <p className="text-[9px] opacity-40 italic">Zaczynając wpisywać, zobaczysz propozycje miast z całego świata.</p>
+            <button 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push('/auth');
+              }}
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-surface-2 border border-border active:scale-95 transition-all text-text-primary hover:bg-brand-500/5 hover:border-brand-500/30"
+            >
+              <div className="flex items-center gap-3">
+                <LogOut size={18} className="text-brand-500" />
+                <span className="font-bold text-sm">Wyloguj ze wszystkich urządzeń</span>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => {
+                if (confirm("Jesteś pewien, że chcesz bezpowrotnie usunąć konto? Tej akcji nie da się cofnąć!")) {
+                  showToast("Skontaktuj się z administratorem, by trwale wyczyścić dany.", "info");
+                }
+              }}
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-red-500/5 border border-red-500/20 active:scale-95 transition-all text-red-500 hover:bg-red-500/10"
+            >
+              <div className="flex items-center gap-3">
+                <ShieldAlert size={18} />
+                <span className="font-bold text-sm">Usuń konto na zawsze</span>
+              </div>
+            </button>
           </div>
         </section>
 
         {/* Version */}
         {suggestions.length === 0 && (
-          <div className="text-center pt-8">
-            <p className="text-[10px] font-bold opacity-40 uppercase tracking-[0.3em]">Zakupsy v1.2.0 • 2026</p>
+          <div className="text-center pt-8 flex flex-col items-center gap-2">
+            <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Zakupsy v1.3.0 PRO</p>
+            <div className="flex gap-4">
+              <Link href="/regulamin" className="text-[10px] text-brand-500 hover:underline">Regulamin</Link>
+              <Link href="/polityka" className="text-[10px] text-brand-500 hover:underline">Prywatność</Link>
+            </div>
           </div>
         )}
       </main>

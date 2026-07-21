@@ -5,16 +5,11 @@ import ListsClient from "@/components/ListsClient";
 export default async function ListsPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/auth");
+  if (!session) redirect("/auth");
 
-  const { data: lists } = await supabase
-    .from("lists")
-    .select("*")
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
-
-  return <ListsClient initialLists={lists ?? []} user={user} />;
+  // Render client component immediately and rely on local cache
+  return <ListsClient initialLists={[]} user={session.user} />;
 }

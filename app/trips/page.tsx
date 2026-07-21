@@ -4,11 +4,9 @@ import TripsClient from "@/components/TripsClient";
 
 export default async function TripsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (!user) redirect("/auth");
+  if (!session) redirect("/auth");
 
-  return <TripsClient user={user} />;
+  return <TripsClient user={session.user} />;
 }
