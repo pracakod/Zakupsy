@@ -212,15 +212,28 @@ export default function FriendsClient({
 
     // Heartbeat: update my last_seen
     const updateMyPresence = async () => {
-      await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", user.id);
+      if (document.visibilityState === "visible") {
+        const nowIso = new Date().toISOString();
+        await supabase.from("profiles").update({ last_seen: nowIso }).eq("id", user.id);
+        setLastSeenMap(prev => ({ ...prev, [user.id]: nowIso }));
+      }
     };
+
     updateMyPresence();
-    const presenceInterval = setInterval(updateMyPresence, 120000); // 2 mins
+    const presenceInterval = setInterval(updateMyPresence, 30000); // 30s heartbeat for instant accuracy
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        updateMyPresence();
+        fetchData();
+      }
+    };
+    window.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Refresh UI (online status dots and relative times)
     const uiInterval = setInterval(() => {
       setLastRequestTime(Date.now());
-    }, 30000);
+    }, 15000);
 
     // Global subscription for community events and PROFILE presence
     const communityChannel = supabase
@@ -256,6 +269,7 @@ export default function FriendsClient({
       supabase.removeChannel(communityChannel); 
       clearInterval(presenceInterval); 
       clearInterval(uiInterval);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [user.email]);
 
@@ -714,7 +728,7 @@ export default function FriendsClient({
               <div className="grid grid-cols-1 gap-3">
                 {filteredFriends.map((friend: any) => {
                   const lastSeen = lastSeenMap[friend.id];
-                  const isOnline = lastSeen && (new Date().getTime() - new Date(lastSeen).getTime() < 300000); // 5 mins
+                  const isOnline = lastSeen && (new Date().getTime() - new Date(lastSeen).getTime() < 90000); // 90s threshold for instant accuracy
                   
                   return (
                     <div 
