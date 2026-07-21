@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
+import InfoModal from "./InfoModal";
 
 export default function AuthForm() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -14,6 +15,7 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [activeInfoModal, setActiveInfoModal] = useState<"regulamin" | "polityka" | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -143,7 +145,22 @@ export default function AuthForm() {
               />
             </div>
             <label htmlFor="terms" className="text-[11px] text-text-muted leading-relaxed">
-              Akceptuję <a href="/regulamin" className="text-brand-500 hover:text-brand-400 font-bold underline cursor-pointer" target="_blank" rel="noopener noreferrer">Regulamin</a> oraz <a href="/polityka" className="text-brand-500 hover:text-brand-400 font-bold underline cursor-pointer" target="_blank" rel="noopener noreferrer">Politykę Prywatności</a>. Rozumiem, że moje dane będą przetwarzane w celu świadczenia usług w oparciu o bezpieczną chmurę Supabase.
+              Akceptuję{" "}
+              <button 
+                type="button" 
+                onClick={() => setActiveInfoModal("regulamin")} 
+                className="text-brand-500 hover:text-brand-400 font-bold underline cursor-pointer inline"
+              >
+                Regulamin
+              </button>{" "}
+              oraz{" "}
+              <button 
+                type="button" 
+                onClick={() => setActiveInfoModal("polityka")} 
+                className="text-brand-500 hover:text-brand-400 font-bold underline cursor-pointer inline"
+              >
+                Politykę Prywatności
+              </button>. Rozumiem, że moje dane będą przetwarzane w celu świadczenia usług w oparciu o bezpieczną chmurę Supabase.
             </label>
           </div>
         )}
@@ -175,6 +192,12 @@ export default function AuthForm() {
           )}
         </button>
       </form>
+
+      {/* Info Modal Component */}
+      <InfoModal 
+        type={activeInfoModal} 
+        onClose={() => setActiveInfoModal(null)} 
+      />
     </div>
   );
 }

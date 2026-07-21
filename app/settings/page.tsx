@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/lib/ToastContext";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import InfoModal from "@/components/InfoModal";
 
 export default function SettingsPage() {
   const { theme, setTheme, isDarkMode, setIsDarkMode, city, setCity } = useTheme();
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [activeInfoModal, setActiveInfoModal] = useState<"regulamin" | "polityka" | null>(null);
 
   // Local Preferences
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -315,12 +317,27 @@ export default function SettingsPage() {
           <div className="text-center pt-8 flex flex-col items-center gap-2">
             <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Zakupsy v1.3.0 PRO</p>
             <div className="flex gap-4">
-              <Link href="/regulamin" className="text-[10px] text-brand-500 hover:underline">Regulamin</Link>
-              <Link href="/polityka" className="text-[10px] text-brand-500 hover:underline">Prywatność</Link>
+              <button 
+                onClick={() => setActiveInfoModal("regulamin")} 
+                className="text-[10px] text-brand-500 hover:underline cursor-pointer"
+              >
+                Regulamin
+              </button>
+              <button 
+                onClick={() => setActiveInfoModal("polityka")} 
+                className="text-[10px] text-brand-500 hover:underline cursor-pointer"
+              >
+                Prywatność
+              </button>
             </div>
           </div>
         )}
       </main>
+
+      <InfoModal 
+        type={activeInfoModal} 
+        onClose={() => setActiveInfoModal(null)} 
+      />
     </div>
   );
 }
