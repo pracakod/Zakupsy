@@ -46,7 +46,17 @@ export default function HomeClient({ user }: { user: User }) {
   const [closestEvent, setClosestEvent] = useState<{name: string, daysLeft: number, date: string, type: 'personal' | 'holiday'} | null>(() => {
     if (typeof window === 'undefined') return null;
     const cached = localStorage.getItem('cache_closest_event');
-    return cached ? JSON.parse(cached) : null;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed?.name === "Dzień Matki" && parsed?.daysLeft > 100) {
+          localStorage.removeItem('cache_closest_event');
+          return null;
+        }
+        return parsed;
+      } catch (e) {}
+    }
+    return null;
   });
   
   useEffect(() => {
